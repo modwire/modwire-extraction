@@ -17,12 +17,20 @@ class ModwireExtraction:
                 discovered.append(language)
         return tuple(discovered)
 
-    def generate_map(self, language: str) -> CodeMap:
+    def generate_map(
+        self,
+        language: str,
+        *,
+        count_excluded_files: bool = False,
+    ) -> CodeMap:
         available = languages.get_supported_languages()
         if language not in available:
             raise ValueError(f"Language is not supported: {language}")
 
-        extraction = languages.load_extractor(language).extract_source(self._root)
+        extraction = languages.load_extractor(language).extract_source(
+            self._root,
+            count_excluded_files=count_excluded_files,
+        )
         dependency_graph = build_dependency_graph(extraction.files)
         return CodeMap(
             language=language,
@@ -30,6 +38,14 @@ class ModwireExtraction:
             dependency_graph=dependency_graph,
         )
 
-    def generate_queryable_map(self, language: str) -> QueryableCodeMap:
-        code_map = self.generate_map(language)
+    def generate_queryable_map(
+        self,
+        language: str,
+        *,
+        count_excluded_files: bool = False,
+    ) -> QueryableCodeMap:
+        code_map = self.generate_map(
+            language,
+            count_excluded_files=count_excluded_files,
+        )
         return QueryableCodeMap(code_map=code_map)

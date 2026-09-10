@@ -7,7 +7,7 @@ name = "modwire-extraction"
 dynamic = ["version"]
 description = "Extraction implementation for modwire."
 readme = "README.md"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.8",
@@ -85,10 +85,21 @@ namespaces = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+cache_dir = ".dev/cache/pytest"
 
 [tool.ruff]
+cache-dir = ".dev/cache/ruff"
 line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.coverage.run]
+data_file = ".dev/coverage/.coverage"
+
+[tool.coverage.html]
+directory = ".dev/coverage/html"
+
+[tool.coverage.xml]
+output = ".dev/coverage/coverage.xml"

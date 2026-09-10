@@ -27,7 +27,7 @@ class SourceExtraction(BaseModel):
     files: dict[FileId, SourceFile]
     modules: dict[ModuleId, FileId]
     files_found: int
-    files_excluded: int
+    files_excluded: int = -1
 
     def files_dict(self) -> dict[FileId, SourceFile]:
         return dict(self.files)
@@ -88,12 +88,20 @@ class SourceExtractor(abc.ABC):
         source_paths, _ = self._discover_source_files(resolved_root)
         return bool(source_paths)
 
-    def extract_source(self, root: Path) -> SourceExtraction:
+    def extract_source(
+        self,
+        root: Path,
+        *,
+        count_excluded_files: bool = False,
+    ) -> SourceExtraction:
         resolved_root = root.resolve()
         if not resolved_root.is_dir():
             raise ValueError(f"Source root is not a directory: {root}")
 
-        source_paths, files_excluded = self._discover_source_files(resolved_root)
+        source_paths, files_excluded = self._discover_source_files(
+            resolved_root,
+            count_excluded_files=count_excluded_files,
+        )
         files: dict[FileId, SourceFile] = {}
         batches = self._source_batches(source_paths)
 
@@ -153,9 +161,14 @@ class SourceExtractor(abc.ABC):
             and self.batch_config.max_workers > 1
         )
 
-    def _discover_source_files(self, root: Path) -> tuple[list[Path], int]:
+    def _discover_source_files(
+        self,
+        root: Path,
+        *,
+        count_excluded_files: bool = False,
+    ) -> tuple[list[Path], int]:
         source_paths: list[Path] = []
-        files_excluded = 0
+        files_excluded = 0 if count_excluded_files else -1
         extensions = self.runtime.file_extensions
 
         for current_root, dir_names, file_names in os.walk(root):
@@ -163,10 +176,11 @@ class SourceExtractor(abc.ABC):
             excluded_dirs = [
                 dir_name for dir_name in dir_names if self._is_excluded_dir(dir_name)
             ]
-            files_excluded += sum(
-                self._count_source_files(current_path / dir_name)
-                for dir_name in excluded_dirs
-            )
+            if count_excluded_files:
+                files_excluded += sum(
+                    self._count_source_files(current_path / dir_name)
+                    for dir_name in excluded_dirs
+                )
             dir_names[:] = [
                 dir_name for dir_name in dir_names if dir_name not in excluded_dirs
             ]

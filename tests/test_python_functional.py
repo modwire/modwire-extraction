@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -102,7 +103,7 @@ def test_public_api_reads_each_language_project_with_same_shape(root: Path) -> N
     assert code_map.language == language
     assert set(files_dict) == set(code_map.extraction.files)
     assert code_map.extraction.files_found == len(code_map.extraction.files)
-    assert code_map.extraction.files_excluded == 1
+    assert code_map.extraction.files_excluded == -1
     assert all(
         set(type(source_file).model_fields) == SOURCE_FILE_SHAPE
         for source_file in files_dict.values()
@@ -236,6 +237,45 @@ def test_discover_ignores_excluded_source_directories(tmp_path: Path) -> None:
     (ignored_root / "generated.py").write_text("def generated():\n    return None\n")
 
     assert ModwireExtraction(tmp_path).discover() == ()
+
+
+def test_excluded_source_directories_are_not_traversed_by_default(
+    tmp_path: Path,
+) -> None:
+    excluded_root = tmp_path / "node_modules"
+    excluded_root.mkdir()
+    (excluded_root / "ignored.py").write_text("value = 1\n")
+    (tmp_path / "included.py").write_text("value = 1\n")
+
+    extraction = ModwireExtraction(tmp_path)
+    with patch.object(
+        SourceExtractor,
+        "_count_source_files",
+        side_effect=AssertionError("excluded tree was traversed"),
+    ):
+        assert extraction.discover() == ("python",)
+        code_map = extraction.generate_map("python")
+
+    assert set(code_map.extraction.files) == {"included.py"}
+    assert code_map.extraction.files_excluded == -1
+
+
+def test_excluded_source_file_count_can_be_requested_explicitly(
+    tmp_path: Path,
+) -> None:
+    excluded_root = tmp_path / "node_modules"
+    nested_root = excluded_root / "dependency"
+    nested_root.mkdir(parents=True)
+    (nested_root / "ignored.py").write_text("value = 1\n")
+    (tmp_path / "included.py").write_text("value = 1\n")
+
+    code_map = ModwireExtraction(tmp_path).generate_map(
+        "python",
+        count_excluded_files=True,
+    )
+
+    assert set(code_map.extraction.files) == {"included.py"}
+    assert code_map.extraction.files_excluded == 1
 
 
 def test_source_extractor_uses_parallel_batch_config(tmp_path: Path) -> None:
