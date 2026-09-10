@@ -1,15 +1,4 @@
 .dev/
-.pytest_cache/
-.ruff_cache/
-.venv/
-build/
-dist/
-*.egg-info/
-src/modwire/_version.py
-__pycache__/
-*.py[cod]
-.dev/
 src/modwire_extraction/extractors/languages/typescript/node_modules/
-src/modwire_extraction/extractors/languages/typescript/.ncc/
 src/modwire_extraction/extractors/languages/php/vendor/
 src/modwire_extraction/extractors/languages/php/script.phar
